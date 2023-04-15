@@ -48,7 +48,7 @@ public class Optimizer {
     }
 
     public String optimizePrompt() {
-        return "Optimize & simplify this code follow OOP, provide a brief explanation";
+        return "Optimize & simplify this code follow OOP, adjust logic that may crash the program, provide a brief explanation";
     }
 
     public String errorPrompt() {

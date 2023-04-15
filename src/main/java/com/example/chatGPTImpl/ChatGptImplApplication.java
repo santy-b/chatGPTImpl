@@ -1,17 +1,15 @@
 package com.example.chatGPTImpl;
 
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.SpringApplication;
 import org.springframework.boot.autoconfigure.SpringBootApplication;
 
 
 @SpringBootApplication
 public class ChatGptImplApplication {
-	@Autowired
 	private static Optimizer optimizer;
 
-	public ChatGptImplApplication(Optimizer optimizer) {
-		this.optimizer = optimizer;
+	public ChatGptImplApplication(AppConfig appConfig) {
+		this.optimizer = appConfig.optimizer();
 	}
 
 
