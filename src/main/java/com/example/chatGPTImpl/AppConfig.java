@@ -13,7 +13,7 @@ public class AppConfig {
     @Value("${api.endpoint}")
     private String apiEndpoint;
 
-    @Value("${enc.api.key}")
+    @Value("${api.key}")
     private String apiKey;
 
     @Value("${model}")
