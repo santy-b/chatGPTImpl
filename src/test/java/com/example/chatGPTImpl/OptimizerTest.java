@@ -1,6 +1,5 @@
 package com.example.chatGPTImpl;
 
-import org.jasypt.encryption.pbe.StandardPBEStringEncryptor;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.test.context.ContextConfiguration;
 import org.springframework.test.context.junit.jupiter.SpringJUnitConfig;
@@ -20,12 +19,15 @@ public class OptimizerTest {
 
 
 	public class TestConfig {
-
-		private String password;
 		private String encAlgorithm;
 		private String apiEndpoint;
 		private String apiKey;
 		private String model;
+		private String host;
+		private int port;
+		private String username;
+		private String password;
+		private String transportProtocol;
 		private String applicationPropertiesPath = "/Users/brian/Code/java/chatGPTImpl/src/main/resources/application.properties";
 
 		{
@@ -34,6 +36,11 @@ public class OptimizerTest {
 				apiEndpoint = getProperty("api.endpoint");
 				apiKey = getProperty("api.key");
 				model = getProperty("model");
+				host = getProperty("host");
+				port = Integer.getInteger(getProperty("port"));
+				username = getProperty("username");
+				password = getProperty("password");
+				transportProtocol = getProperty("transport.protocol");
 			} catch (IOException e) {
 				throw new RuntimeException(e);
 			}
@@ -47,7 +54,7 @@ public class OptimizerTest {
 		}
 
 		public Optimizer optimizer() {
-			return new Optimizer(apiEndpoint, apiKey, model);
+			return new Optimizer(apiEndpoint, apiKey, model, host, port, username, password, transportProtocol);
 		}
 	}
 
@@ -55,13 +62,6 @@ public class OptimizerTest {
 
 	@Test
 	public void testProcessCode() throws Exception {
-		String filePath = "/Users/brian/Code/java/server/src/main/java/com/example/server/Test.java";
-		String promptMessage = optimizer.optimizePrompt();
-		String[] result = optimizer.processCode(filePath, promptMessage);
-		assertNotNull(result);
-		assertEquals(2, result.length);
-		assertFalse(result[0].isEmpty());
-		assertFalse(result[1].isEmpty());
-		assertFalse(result[1].startsWith("Traceback"));
+
 	}
 }

@@ -19,8 +19,25 @@ public class AppConfig {
     @Value("${model}")
     private String model;
 
+    @Value("${host}")
+    private String host;
+
+    @Value("${port}")
+    private int port;
+
+    @Value("${username}")
+    private String username;
+
+    @Value("${password}")
+    private String password;
+
+    @Value("${transport.protocol}")
+    private String transportProtocol;
+
+
+
     @Bean
     public Optimizer optimizer() {
-        return new Optimizer(apiEndpoint, apiKey, model);
+        return new Optimizer(apiEndpoint, apiKey, model, host, port, username, password, transportProtocol);
     }
 }

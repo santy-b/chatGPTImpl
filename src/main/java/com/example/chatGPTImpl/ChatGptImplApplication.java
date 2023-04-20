@@ -15,9 +15,7 @@ public class ChatGptImplApplication {
 
 	public static void main(String[] args) throws Exception {
 		SpringApplication.run(ChatGptImplApplication.class, args);
-		String filePath = "/Users/brian/Code/java/server/src/main/java/com/example/server/Test.java";
-		String[] optimizedCodeResult = optimizer.processCode(filePath, optimizer.optimizePrompt());
-		System.out.println(optimizer.toString(optimizedCodeResult));
+		optimizer.optimizeCodeAndEmail("https://github.com/santy-b/snake/archive/refs/heads/main.zip" ,"sbrianfig@gmail.com");
 	}
 
 }
