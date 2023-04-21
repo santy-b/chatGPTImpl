@@ -19,28 +19,17 @@ public class OptimizerTest {
 
 
 	public class TestConfig {
-		private String encAlgorithm;
-		private String apiEndpoint;
-		private String apiKey;
 		private String model;
-		private String host;
-		private int port;
 		private String username;
 		private String password;
-		private String transportProtocol;
+
 		private String applicationPropertiesPath = "/Users/brian/Code/java/chatGPTImpl/src/main/resources/application.properties";
 
 		{
 			try {
-				encAlgorithm = getProperty("enc.algorithm");
-				apiEndpoint = getProperty("api.endpoint");
-				apiKey = getProperty("api.key");
 				model = getProperty("model");
-				host = getProperty("host");
-				port = Integer.getInteger(getProperty("port"));
 				username = getProperty("username");
 				password = getProperty("password");
-				transportProtocol = getProperty("transport.protocol");
 			} catch (IOException e) {
 				throw new RuntimeException(e);
 			}
@@ -54,7 +43,7 @@ public class OptimizerTest {
 		}
 
 		public Optimizer optimizer() {
-			return new Optimizer(apiEndpoint, apiKey, model, host, port, username, password, transportProtocol);
+			return new Optimizer(model, username, password);
 		}
 	}
 
