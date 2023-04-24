@@ -1,11 +1,18 @@
 package com.example.chatGPTImpl;
 
+import org.w3c.dom.Document;
+import org.w3c.dom.Element;
+import org.w3c.dom.Node;
+import org.w3c.dom.NodeList;
+
 import javax.tools.JavaCompiler;
 import javax.tools.JavaFileObject;
 import javax.tools.StandardJavaFileManager;
 import javax.tools.Diagnostic;
 import javax.tools.DiagnosticCollector;
 import javax.tools.ToolProvider;
+import javax.xml.parsers.DocumentBuilder;
+import javax.xml.parsers.DocumentBuilderFactory;
 import java.io.*;
 import java.util.ArrayList;
 import java.util.List;
@@ -37,9 +44,13 @@ public class Optimizer {
             JavaCompiler.CompilationTask task = compileJavaFile(javaFile, diagnostics);
             boolean success = task.call();
             String errors = getErrorMessages(success, diagnostics)[0];
+
+            // Find corresponding pom.xml file for the Java file
+            File pomFile = findPomFile(javaFile.getName(), repositoryDirectory);
+            String prompt = optimizePrompt() + "\n" + "Dependencies: " + String.join("\n", getPomDependencies(pomFile));
             String solution = null;
             try {
-                solution = client.apiRequest(javaFile.getAbsolutePath(), optimizePrompt(), model, errors);
+                solution = client.apiRequest(javaFile.getAbsolutePath(), prompt, model, errors);
             } catch (IOException e) {
                 throw new RuntimeException(e);
             }
@@ -62,6 +73,46 @@ public class Optimizer {
         return javaFiles;
     }
 
+    private File findPomFile(String javaFileName, File directory) {
+        File javaFile = new File(directory, javaFileName);
+        File pomFile = new File(directory, "pom.xml");
+        while (!pomFile.exists() && !javaFile.getParentFile().equals(directory.getParentFile())) {
+            directory = directory.getParentFile();
+            pomFile = new File(directory, "pom.xml");
+        }
+        return pomFile.exists() ? pomFile : null;
+    }
+
+    private List<String> getPomDependencies(File pomFile) {
+        List<String> dependencies = new ArrayList<>();
+        try {
+            DocumentBuilderFactory documentBuilderFactory = DocumentBuilderFactory.newInstance();
+            DocumentBuilder documentBuilder = documentBuilderFactory.newDocumentBuilder();
+            Document document = documentBuilder.parse(pomFile);
+            String javaVersion = document.getElementsByTagName("java.version").item(0).getTextContent();
+            NodeList dependencyList = document.getElementsByTagName("dependency");
+            for (int i = 0; i < dependencyList.getLength(); i++) {
+                Element dependency = (Element) dependencyList.item(i);
+                NodeList groupId = dependency.getElementsByTagName("groupId");
+                NodeList artifactId = dependency.getElementsByTagName("artifactId");
+                NodeList version = dependency.getElementsByTagName("version");
+                if (groupId.getLength() > 0 && artifactId.getLength() > 0 && version.getLength() > 0) {
+                    String groupIdStr = groupId.item(0) != null ? groupId.item(0).getTextContent() : "";
+                    String artifactIdStr = artifactId.item(0) != null ? artifactId.item(0).getTextContent() : "";
+                    String versionStr = version.item(0) != null ? version.item(0).getTextContent() : "";
+                    String dependencyString = groupIdStr + ":" + artifactIdStr + ":" + versionStr;
+                    dependencies.add(dependencyString);
+                }
+            }
+            if (javaVersion != null && !javaVersion.isEmpty()) {
+                dependencies.add("java.version:" + javaVersion);
+            }
+        } catch (Exception e) {
+            throw new RuntimeException("Error parsing POM file: " + e.getMessage(), e);
+        }
+        return dependencies;
+    }
+
     private JavaCompiler.CompilationTask compileJavaFile(File javaFile, DiagnosticCollector<JavaFileObject> diagnostics) {
         try {
             JavaCompiler compiler = ToolProvider.getSystemJavaCompiler();
@@ -77,7 +128,7 @@ public class Optimizer {
 
     private String optimizePrompt() {
         return "Optimize the following code and suggest performance improvements " +
-                "in code. If the response exceeds the maximum token limit, keep the" +
+                "in code. If the response exceeds the maximum token limit, keep the " +
                 "response concise and only return suggestions for affected methods in code.";
     }
 
