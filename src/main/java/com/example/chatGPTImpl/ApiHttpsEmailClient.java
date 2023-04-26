@@ -10,9 +10,6 @@ import java.net.HttpURLConnection;
 import java.net.URL;
 import java.nio.file.Files;
 import java.nio.file.Path;
-import java.nio.file.Paths;
-import java.util.ArrayList;
-import java.util.List;
 import java.util.Properties;
 import java.util.logging.Level;
 import java.util.logging.Logger;
@@ -56,8 +53,7 @@ public class ApiHttpsEmailClient {
         }
     }
 
-    public void sendEmail(String recipientEmail, String solution,
-                          String fileName, String username, String password) {
+    public void sendEmail(String recipientEmail, String solution, String fileName, String username, String password) {
         JavaMailSenderImpl mailSender = new JavaMailSenderImpl();
         mailSender.setHost(HOST);
         mailSender.setPort(PORT);
@@ -67,7 +63,6 @@ public class ApiHttpsEmailClient {
         props.put("mail.transport.protocol", "smtp");
         props.put("mail.smtp.auth", "true");
         props.put("mail.smtp.starttls.enable", "true");
-
         SimpleMailMessage mailMessage = new SimpleMailMessage();
         mailMessage.setFrom(username);
         mailMessage.setTo(username);
@@ -77,88 +72,50 @@ public class ApiHttpsEmailClient {
         logger.log(Level.INFO, "Suggested output sent successfully to email address: " + recipientEmail);
     }
 
-    public String apiRequest(String filePath, String[] prompt, String model) throws IOException {
+    public String apiRequest(String[] prompts, String model) throws IOException {
         String apiEndpoint = getProperty("api.endpoint");
         String apiKey = getProperty("api.key");
-        JSONObject requestData;
-        List<String> codeChunks = getCodeChunks(filePath);
-        List<String> responses = new ArrayList<>();
-        for (int i = 0; i < codeChunks.size(); i++) {
-            HttpsURLConnection connection = null;
-            try {
-                URL url = new URL(apiEndpoint);
-                connection = (HttpsURLConnection) url.openConnection();
-                connection.setRequestMethod("POST");
-                connection.setRequestProperty("Content-Type", "application/json");
-                connection.setRequestProperty("Authorization", "Bearer " + apiKey);
-                connection.setDoOutput(true);
-
-                if (i == 0)
-                    createRequestData(prompt[0], model);
-
-
-                requestData = createRequestData(codeChunks.get(i), model);
-                try (OutputStream outputStream = connection.getOutputStream()) {
-                    outputStream.write(requestData.toString().getBytes());
-                }
-
-                if (i == codeChunks.size() - 1) {
-                    createRequestData(prompt[1], model);
-                    createRequestData(prompt[2], model);
-                }
-
-                int responseCode = connection.getResponseCode();
-                if (responseCode != HttpURLConnection.HTTP_OK) {
-                    throw new IOException("HTTP error code: " + responseCode);
-                }
-
-                try (InputStream inputStream = connection.getInputStream()) {
-                    BufferedReader reader = new BufferedReader(new InputStreamReader(inputStream));
-                    StringBuilder responseBuilder = new StringBuilder();
-                    String line;
-                    while ((line = reader.readLine()) != null) {
-                        responseBuilder.append(line);
-                    }
-                    String response = responseBuilder.toString();
-                    JSONObject json = new JSONObject(response);
-                    responses.add(json.getJSONArray("choices").getJSONObject(0).getString("text"));
-                } catch (JSONException e) {
-                    throw new IOException("Error parsing JSON response", e);
-                }
-            } finally {
-                if (connection != null) {
-                    connection.disconnect();
-                }
-            }
-        }
-        return String.join("", responses);
+        JSONObject requestData = createRequestData(String.join("", prompts), model);
+        String response = sendHttpsRequest(new URL(apiEndpoint), requestData.toString(), apiKey);
+        JSONObject json = new JSONObject(response);
+        return json.getJSONArray("choices").getJSONObject(0).getString("text");
     }
 
-    private List<String> getCodeChunks(String filePath) throws IOException {
-        String code = Files.readString(Paths.get(filePath));
-        code = code.replaceAll("\\s{2,}", " ");
-        List<String> codeChunks = new ArrayList<>();
-        int chunkSize = MAX_TOKENS - 3;
-        int startIndex = 0;
-        int endIndex = code.length();
-        while (startIndex < code.length()) {
-            if (endIndex > code.length()) {
-                endIndex = code.length();
-            } else {
-                while (endIndex > startIndex && !Character.isWhitespace(code.charAt(endIndex - 1))) {
-                    endIndex--;
-                }
-                if (endIndex == startIndex) {
-                    endIndex = Math.min(startIndex + chunkSize, code.length());
-                }
-            }
-            codeChunks.add(code.substring(startIndex, endIndex).replaceAll("\\s{2,}", " "));
-            startIndex = endIndex;
-            endIndex = startIndex + chunkSize;
-        }
-        return codeChunks;
-    }
+    private String sendHttpsRequest(URL url, String requestBody, String apiKey) throws IOException {
+        HttpsURLConnection connection = null;
+        try {
+            connection = (HttpsURLConnection) url.openConnection();
+            connection.setRequestMethod("POST");
+            connection.setRequestProperty("Content-Type", "application/json");
+            connection.setRequestProperty("Authorization", "Bearer " + apiKey);
+            connection.setDoOutput(true);
 
+            try (OutputStream outputStream = connection.getOutputStream()) {
+                outputStream.write(requestBody.getBytes());
+            }
+
+            int responseCode = connection.getResponseCode();
+            if (responseCode != HttpURLConnection.HTTP_OK) {
+                throw new IOException("HTTP error code: " + responseCode);
+            }
+
+            try (InputStream inputStream = connection.getInputStream()) {
+                BufferedReader reader = new BufferedReader(new InputStreamReader(inputStream));
+                StringBuilder responseBuilder = new StringBuilder();
+                String line;
+                while ((line = reader.readLine()) != null) {
+                    responseBuilder.append(line);
+                }
+                return responseBuilder.toString();
+            } catch (JSONException e) {
+                throw new IOException("Error parsing JSON response", e);
+            }
+        } finally {
+            if (connection != null) {
+                connection.disconnect();
+            }
+        }
+    }
 
     private JSONObject createRequestData(String prompt, String model) {
         JSONObject data = new JSONObject();
@@ -166,6 +123,9 @@ public class ApiHttpsEmailClient {
         data.put("prompt", prompt);
         data.put("max_tokens", MAX_TOKENS);
         data.put("temperature", TEMPERATURE);
+        System.out.println("__________________________ Start of Request Data __________________________");
+        System.out.println(data);
+        System.out.println("__________________________ End of Request Data __________________________");
         return data;
     }
 

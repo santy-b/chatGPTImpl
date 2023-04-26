@@ -3,7 +3,6 @@ package com.example.chatGPTImpl;
 import org.w3c.dom.Document;
 import org.w3c.dom.Element;
 import org.w3c.dom.NodeList;
-
 import javax.tools.JavaCompiler;
 import javax.tools.JavaFileObject;
 import javax.tools.StandardJavaFileManager;
@@ -49,12 +48,10 @@ public class Optimizer {
             String[] prompt = {optimizePrompt()[0], optimizePrompt()[1] + "\n" + errors, optimizePrompt()[2] + "\n" + getPomDependencies(pomFile)};
             String solution = null;
             try {
-                solution = client.apiRequest(javaFile.getAbsolutePath(), prompt, model);
+                solution = client.apiRequest(prompt, model);
             } catch (IOException e) {
                 throw new RuntimeException(e);
             }
-            System.out.println("SOLUTION");
-            System.out.println(solution);
             client.sendEmail(recipientEmail, solution, javaFile.getName(), userName, password);
         }
     }
@@ -130,12 +127,14 @@ public class Optimizer {
     private String[] optimizePrompt() {
         String[] prompt = {
                 "Review Java code for areas that can be improved in terms of best practices, " +
-                "correctness, and efficiency. Provide feedback on how to make the code better: ",
+                "correctness, and efficiency. Provide feedback in code format on how to make the code better. " +
+                "Structure the response explaining What needs to be fixed and below that the proposed solution " +
+                "in code format. If no adjustment's is necessary simply say this method is already optimized. ",
 
-                "Errors found in the code by the java compiler:",
+                "Errors found in the code by the java compiler: ",
 
                 "Check the code's provided dependencies list for any known vulnerabilities " +
-                "or compatibility issues, and provide recommendations for how to address them:"};
+                "or compatibility issues, and provide recommendations for how to address them: "};
         return prompt;
     }
 
