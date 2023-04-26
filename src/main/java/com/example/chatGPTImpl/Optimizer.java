@@ -2,7 +2,6 @@ package com.example.chatGPTImpl;
 
 import org.w3c.dom.Document;
 import org.w3c.dom.Element;
-import org.w3c.dom.Node;
 import org.w3c.dom.NodeList;
 
 import javax.tools.JavaCompiler;
@@ -43,17 +42,19 @@ public class Optimizer {
             DiagnosticCollector<JavaFileObject> diagnostics = new DiagnosticCollector<>();
             JavaCompiler.CompilationTask task = compileJavaFile(javaFile, diagnostics);
             boolean success = task.call();
-            String errors = getErrorMessages(success, diagnostics)[0];
+            String errors = getErrorMessages(success, diagnostics);
 
             // Find corresponding pom.xml file for the Java file
             File pomFile = findPomFile(javaFile.getName(), repositoryDirectory);
-            String prompt = optimizePrompt() + "\n" + "Dependencies: " + String.join("\n", getPomDependencies(pomFile));
+            String[] prompt = {optimizePrompt()[0], optimizePrompt()[1] + "\n" + errors, optimizePrompt()[2] + "\n" + getPomDependencies(pomFile)};
             String solution = null;
             try {
-                solution = client.apiRequest(javaFile.getAbsolutePath(), prompt, model, errors);
+                solution = client.apiRequest(javaFile.getAbsolutePath(), prompt, model);
             } catch (IOException e) {
                 throw new RuntimeException(e);
             }
+            System.out.println("SOLUTION");
+            System.out.println(solution);
             client.sendEmail(recipientEmail, solution, javaFile.getName(), userName, password);
         }
     }
@@ -126,15 +127,21 @@ public class Optimizer {
         }
     }
 
-    private String optimizePrompt() {
-        return "Optimize the following code and suggest performance improvements " +
-                "in code. If the response exceeds the maximum token limit, keep the " +
-                "response concise and only return suggestions for affected methods in code.";
+    private String[] optimizePrompt() {
+        String[] prompt = {
+                "Review Java code for areas that can be improved in terms of best practices, " +
+                "correctness, and efficiency. Provide feedback on how to make the code better: ",
+
+                "Errors found in the code by the java compiler:",
+
+                "Check the code's provided dependencies list for any known vulnerabilities " +
+                "or compatibility issues, and provide recommendations for how to address them:"};
+        return prompt;
     }
 
-    private String[] getErrorMessages(boolean success, DiagnosticCollector<JavaFileObject> diagnostics) {
+    private String getErrorMessages(boolean success, DiagnosticCollector<JavaFileObject> diagnostics) {
         if (success) {
-            return new String[]{"No errors found", ""};
+            return "No errors found";
         } else {
             StringBuilder errorBuilder = new StringBuilder();
             for (Diagnostic<? extends JavaFileObject> diagnostic : diagnostics.getDiagnostics()) {
@@ -142,7 +149,7 @@ public class Optimizer {
             }
             String errorMessage = "Compilation Error: " + errorBuilder;
             logger.log(Level.SEVERE, errorMessage);
-            return new String[]{errorMessage, ""};
+            return errorMessage;
         }
     }
 }

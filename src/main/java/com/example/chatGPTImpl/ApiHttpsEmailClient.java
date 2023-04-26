@@ -77,13 +77,13 @@ public class ApiHttpsEmailClient {
         logger.log(Level.INFO, "Suggested output sent successfully to email address: " + recipientEmail);
     }
 
-    public String apiRequest(String filePath, String prompt, String model, String errors) throws IOException {
+    public String apiRequest(String filePath, String[] prompt, String model) throws IOException {
         String apiEndpoint = getProperty("api.endpoint");
         String apiKey = getProperty("api.key");
-
-        List<String> codeChunks = getCodeChunks(filePath, prompt);
+        JSONObject requestData;
+        List<String> codeChunks = getCodeChunks(filePath);
         List<String> responses = new ArrayList<>();
-        for (String chunk : codeChunks) {
+        for (int i = 0; i < codeChunks.size(); i++) {
             HttpsURLConnection connection = null;
             try {
                 URL url = new URL(apiEndpoint);
@@ -93,10 +93,18 @@ public class ApiHttpsEmailClient {
                 connection.setRequestProperty("Authorization", "Bearer " + apiKey);
                 connection.setDoOutput(true);
 
-                JSONObject requestData = createRequestData(prompt + ": \n" + chunk + "\n" + errors, model);
+                if (i == 0)
+                    createRequestData(prompt[0], model);
 
+
+                requestData = createRequestData(codeChunks.get(i), model);
                 try (OutputStream outputStream = connection.getOutputStream()) {
                     outputStream.write(requestData.toString().getBytes());
+                }
+
+                if (i == codeChunks.size() - 1) {
+                    createRequestData(prompt[1], model);
+                    createRequestData(prompt[2], model);
                 }
 
                 int responseCode = connection.getResponseCode();
@@ -126,26 +134,31 @@ public class ApiHttpsEmailClient {
         return String.join("", responses);
     }
 
-    private List<String> getCodeChunks(String filePath, String prompt) throws IOException {
+    private List<String> getCodeChunks(String filePath) throws IOException {
         String code = Files.readString(Paths.get(filePath));
+        code = code.replaceAll("\\s{2,}", " ");
         List<String> codeChunks = new ArrayList<>();
-        int chunkSize = MAX_TOKENS - prompt.length() - 3;
+        int chunkSize = MAX_TOKENS - 3;
         int startIndex = 0;
-        int endIndex = chunkSize;
+        int endIndex = code.length();
         while (startIndex < code.length()) {
-            if (endIndex >= code.length()) {
+            if (endIndex > code.length()) {
                 endIndex = code.length();
             } else {
-                while (!Character.isWhitespace(code.charAt(endIndex))) {
+                while (endIndex > startIndex && !Character.isWhitespace(code.charAt(endIndex - 1))) {
                     endIndex--;
                 }
+                if (endIndex == startIndex) {
+                    endIndex = Math.min(startIndex + chunkSize, code.length());
+                }
             }
-            codeChunks.add(code.substring(startIndex, endIndex));
+            codeChunks.add(code.substring(startIndex, endIndex).replaceAll("\\s{2,}", " "));
             startIndex = endIndex;
             endIndex = startIndex + chunkSize;
         }
         return codeChunks;
     }
+
 
     private JSONObject createRequestData(String prompt, String model) {
         JSONObject data = new JSONObject();
