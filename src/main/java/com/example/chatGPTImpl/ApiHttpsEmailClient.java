@@ -17,18 +17,19 @@ import java.util.zip.ZipEntry;
 import java.util.zip.ZipInputStream;
 
 public class ApiHttpsEmailClient {
-    private final String HOST = "smtp.gmail.com";
-    private final int PORT = 587;
     private final int MAX_TOKENS = 2048;
     private final double TEMPERATURE = 0.2;
     private String apiEndpoint;
     private String apiKey;
+    private String username;
+    private String password;
     private Logger logger;
-    private final String PROPERTIESPATH = "/Users/brian/Code/java/chatGPTImpl/src/main/resources/application.properties";
 
-    public ApiHttpsEmailClient(String apiEndpoint, String apiKey) {
+    public ApiHttpsEmailClient(String apiEndpoint, String apiKey, String username, String password) {
         this.apiEndpoint = apiEndpoint;
         this.apiKey = apiKey;
+        this.username = username;
+        this.password = password;
     }
 
     public void getLogger(Logger logger) {
@@ -61,10 +62,10 @@ public class ApiHttpsEmailClient {
         }
     }
 
-    public void sendEmail(String recipientEmail, String solution, String fileName, String username, String password) {
+    public void sendEmail(String recipientEmail, String solution, String fileName) {
         JavaMailSenderImpl mailSender = new JavaMailSenderImpl();
-        mailSender.setHost(HOST);
-        mailSender.setPort(PORT);
+        mailSender.setHost("smtp.gmail.com");
+        mailSender.setPort(587);
         mailSender.setUsername(username);
         mailSender.setPassword(password);
         Properties props = mailSender.getJavaMailProperties();
@@ -129,9 +130,9 @@ public class ApiHttpsEmailClient {
         data.put("prompt", prompt);
         data.put("max_tokens", MAX_TOKENS);
         data.put("temperature", TEMPERATURE);
-        System.out.println("__________________________ Start of Request Data __________________________");
-        System.out.println(data);
-        System.out.println("__________________________ End of Request Data __________________________");
+        System.out.println("__________________________ START OF REQUEST DATA __________________________");
+        System.out.println("Prompt:\n" + data.getString("prompt").replaceAll(":", ":\n"));
+        System.out.println("___________________________ END OF REQUEST DATA ___________________________");
         return data;
     }
 

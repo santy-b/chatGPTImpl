@@ -21,11 +21,11 @@ public class AppConfig {
 
     @Bean
     public Optimizer optimizer() {
-        return new Optimizer(model, username, password);
+        return new Optimizer(model);
     }
 
     @Bean
     public ApiHttpsEmailClient apiHttpsEmailClient() {
-        return new ApiHttpsEmailClient(apiEndpoint, apiKey);
+        return new ApiHttpsEmailClient(apiEndpoint, apiKey, username, password);
     }
 }

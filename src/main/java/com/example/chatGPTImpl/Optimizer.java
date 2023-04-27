@@ -20,15 +20,11 @@ import java.util.logging.Logger;
 
 public class Optimizer {
     private String model;
-    private String userName;
-    private String password;
     private Logger logger = Logger.getLogger(Optimizer.class.getName());
     @Autowired
     private ApiHttpsEmailClient client = new AppConfig().apiHttpsEmailClient();
-    public Optimizer(String model, String userName, String password) {
+    public Optimizer(String model) {
         this.model = model;
-        this.userName = userName;
-        this.password = password;
     }
 
     public void optimizeCodeAndEmail(String repositoryUrl, String recipientEmail) throws IOException {
@@ -47,7 +43,6 @@ public class Optimizer {
             boolean success = task.call();
             String errors = getErrorMessages(success, diagnostics);
 
-            // Find corresponding pom.xml file for the Java file
             File pomFile = findPomFile(javaFile.getName(), repositoryDirectory);
             String prompt = (optimizePrompt()[0] + "\n" + fileToString(javaFile) + "\n" + optimizePrompt()[1] + "\n" + errors + "\n" + optimizePrompt()[2] + "\n" + getPomDependencies(pomFile)).replaceAll("\\s{2,}", " ");
             String solution = null;
@@ -56,7 +51,7 @@ public class Optimizer {
             } catch (IOException e) {
                 throw new RuntimeException(e);
             }
-            client.sendEmail(recipientEmail, solution, javaFile.getName(), userName, password);
+            client.sendEmail(recipientEmail, solution, javaFile.getName());
         }
     }
 
@@ -142,15 +137,15 @@ public class Optimizer {
 
     private String[] optimizePrompt() {
         String[] prompt = {
-                "Review Java code for areas that can be improved in terms of best practices, " +
-                        "correctness, and efficiency. Provide feedback in code format on how to make the code better. " +
-                        "Structure the response explaining What needs to be fixed and below that the proposed solution " +
-                        "in code format. If no adjustment's is necessary simply say this method is already optimized. ",
+               "Review Java code for areas that can be improved in terms of best practices, " +
+               "correctness, and efficiency. Provide feedback in code format on how to make the code better. " +
+               "Structure the response explaining What needs to be fixed and below that the proposed solution " +
+               "in code format. If no adjustment's is necessary simply say this method is already optimized: ",
 
-                "Errors found in the code by the java compiler: ",
+               "Errors found in the code by the java compiler: ",
 
-                "Check the code's provided dependencies list for any known vulnerabilities " +
-                        "or compatibility issues, and provide recommendations for how to address them: "};
+               "Check the code's provided dependencies list for any known vulnerabilities " +
+               "or compatibility issues, and provide recommendations for how to address them: "};
         return prompt;
     }
 
