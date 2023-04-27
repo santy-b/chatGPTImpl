@@ -31,7 +31,7 @@ public class Optimizer {
         this.password = password;
     }
 
-    public void optimizeCodeAndEmail(String repositoryUrl, String recipientEmail) {
+    public void optimizeCodeAndEmail(String repositoryUrl, String recipientEmail) throws IOException {
         client.getLogger(logger);
 
         File repositoryDirectory = null;
@@ -49,7 +49,7 @@ public class Optimizer {
 
             // Find corresponding pom.xml file for the Java file
             File pomFile = findPomFile(javaFile.getName(), repositoryDirectory);
-            String[] prompt = {optimizePrompt()[0], optimizePrompt()[1] + "\n" + errors, optimizePrompt()[2] + "\n" + getPomDependencies(pomFile)};
+            String prompt = (optimizePrompt()[0] + "\n" + fileToString(javaFile) + "\n" + optimizePrompt()[1] + "\n" + errors + "\n" + optimizePrompt()[2] + "\n" + getPomDependencies(pomFile)).replaceAll("\\s{2,}", " ");
             String solution = null;
             try {
                 solution = client.apiRequest(prompt, model);
@@ -73,6 +73,18 @@ public class Optimizer {
             }
         }
         return javaFiles;
+    }
+
+    private String fileToString(File file) throws IOException {
+        StringBuilder stringBuilder = new StringBuilder();
+        try (BufferedReader reader = new BufferedReader(new FileReader(file))) {
+            String line = reader.readLine();
+            while (line != null) {
+                stringBuilder.append(line).append("\n");
+                line = reader.readLine();
+            }
+        }
+        return stringBuilder.toString();
     }
 
     private File findPomFile(String javaFileName, File directory) {

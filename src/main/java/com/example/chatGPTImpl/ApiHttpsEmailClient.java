@@ -80,8 +80,8 @@ public class ApiHttpsEmailClient {
         logger.log(Level.INFO, "Suggested output sent successfully to email address: " + recipientEmail);
     }
 
-    public String apiRequest(String[] prompts, String model) throws IOException {
-        JSONObject requestData = createRequestData(String.join("", prompts), model);
+    public String apiRequest(String prompts, String model) throws IOException {
+        JSONObject requestData = createRequestData(prompts, model);
         String response = sendHttpsRequest(new URL(apiEndpoint), requestData.toString(), apiKey);
         JSONObject json = new JSONObject(response);
         return json.getJSONArray("choices").getJSONObject(0).getString("text");
