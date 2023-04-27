@@ -12,6 +12,7 @@ public class ChatGptImplApplication {
 		this.optimizer = appConfig.optimizer();
 	}
 
+
 	public static void main(String[] args) throws Exception {
 		SpringApplication.run(ChatGptImplApplication.class, args);
 		optimizer.optimizeCodeAndEmail("https://github.com/santy-b/snake/archive/refs/heads/main.zip" ,"sbrianfig@gmail.com");

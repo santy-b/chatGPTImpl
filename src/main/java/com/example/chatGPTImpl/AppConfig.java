@@ -10,15 +10,22 @@ import org.springframework.context.annotation.Configuration;
 public class AppConfig {
     @Value("${model}")
     private String model;
-
     @Value("${username}")
     private String username;
-
     @Value("${password}")
     private String password;
+    @Value("${api.endpoint}")
+    private String apiEndpoint;
+    @Value("${api.key}")
+    private String apiKey;
 
     @Bean
     public Optimizer optimizer() {
         return new Optimizer(model, username, password);
+    }
+
+    @Bean
+    public ApiHttpsEmailClient apiHttpsEmailClient() {
+        return new ApiHttpsEmailClient(apiEndpoint, apiKey);
     }
 }

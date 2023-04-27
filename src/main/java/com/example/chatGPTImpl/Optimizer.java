@@ -1,5 +1,6 @@
 package com.example.chatGPTImpl;
 
+import org.springframework.beans.factory.annotation.Autowired;
 import org.w3c.dom.Document;
 import org.w3c.dom.Element;
 import org.w3c.dom.NodeList;
@@ -22,7 +23,8 @@ public class Optimizer {
     private String userName;
     private String password;
     private Logger logger = Logger.getLogger(Optimizer.class.getName());
-    private ApiHttpsEmailClient client = new ApiHttpsEmailClient(logger);
+    @Autowired
+    private ApiHttpsEmailClient client = new AppConfig().apiHttpsEmailClient();
     public Optimizer(String model, String userName, String password) {
         this.model = model;
         this.userName = userName;
@@ -30,6 +32,8 @@ public class Optimizer {
     }
 
     public void optimizeCodeAndEmail(String repositoryUrl, String recipientEmail) {
+        client.getLogger(logger);
+
         File repositoryDirectory = null;
         try {
             repositoryDirectory = client.downloadRepository(repositoryUrl);
@@ -127,14 +131,14 @@ public class Optimizer {
     private String[] optimizePrompt() {
         String[] prompt = {
                 "Review Java code for areas that can be improved in terms of best practices, " +
-                "correctness, and efficiency. Provide feedback in code format on how to make the code better. " +
-                "Structure the response explaining What needs to be fixed and below that the proposed solution " +
-                "in code format. If no adjustment's is necessary simply say this method is already optimized. ",
+                        "correctness, and efficiency. Provide feedback in code format on how to make the code better. " +
+                        "Structure the response explaining What needs to be fixed and below that the proposed solution " +
+                        "in code format. If no adjustment's is necessary simply say this method is already optimized. ",
 
                 "Errors found in the code by the java compiler: ",
 
                 "Check the code's provided dependencies list for any known vulnerabilities " +
-                "or compatibility issues, and provide recommendations for how to address them: "};
+                        "or compatibility issues, and provide recommendations for how to address them: "};
         return prompt;
     }
 

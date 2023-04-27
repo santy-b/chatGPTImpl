@@ -21,9 +21,17 @@ public class ApiHttpsEmailClient {
     private final int PORT = 587;
     private final int MAX_TOKENS = 2048;
     private final double TEMPERATURE = 0.2;
-    private final String PROPERTIESPATH = "/Users/brian/Code/java/chatGPTImpl/src/main/resources/application.properties";
+    private String apiEndpoint;
+    private String apiKey;
     private Logger logger;
-    public ApiHttpsEmailClient(Logger logger) {
+    private final String PROPERTIESPATH = "/Users/brian/Code/java/chatGPTImpl/src/main/resources/application.properties";
+
+    public ApiHttpsEmailClient(String apiEndpoint, String apiKey) {
+        this.apiEndpoint = apiEndpoint;
+        this.apiKey = apiKey;
+    }
+
+    public void getLogger(Logger logger) {
         this.logger = logger;
     }
 
@@ -73,8 +81,6 @@ public class ApiHttpsEmailClient {
     }
 
     public String apiRequest(String[] prompts, String model) throws IOException {
-        String apiEndpoint = getProperty("api.endpoint");
-        String apiKey = getProperty("api.key");
         JSONObject requestData = createRequestData(String.join("", prompts), model);
         String response = sendHttpsRequest(new URL(apiEndpoint), requestData.toString(), apiKey);
         JSONObject json = new JSONObject(response);
@@ -147,12 +153,5 @@ public class ApiHttpsEmailClient {
         Files.delete(zipFile.toPath());
 
         return localDirectory.toFile();
-    }
-
-    private String getProperty(String property) throws IOException {
-        Properties props = new Properties();
-        Reader reader = new FileReader(PROPERTIESPATH);
-        props.load(reader);
-        return props.getProperty(property);
     }
 }

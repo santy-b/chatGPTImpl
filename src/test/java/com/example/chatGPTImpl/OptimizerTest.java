@@ -42,12 +42,12 @@ public class OptimizerTest {
 			return props.getProperty(property);
 		}
 
-		public Optimizer optimizer() {
-			return new Optimizer(model, username, password);
-		}
+//		public Optimizer optimizer() {
+//			return new Optimizer(model, username, password);
+//		}
 	}
 
-	private Optimizer optimizer = new TestConfig().optimizer();
+//	private Optimizer optimizer = new TestConfig().optimizer();
 
 	@Test
 	public void testProcessCode() throws Exception {
