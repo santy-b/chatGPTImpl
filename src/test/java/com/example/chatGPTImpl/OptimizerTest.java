@@ -1,16 +1,13 @@
 package com.example.chatGPTImpl;
 
+import org.junit.jupiter.api.Test;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.test.context.ContextConfiguration;
 import org.springframework.test.context.junit.jupiter.SpringJUnitConfig;
-import org.testng.annotations.Test;
 import java.io.FileReader;
 import java.io.IOException;
 import java.io.Reader;
 import java.util.Properties;
-
-import static org.testng.AssertJUnit.*;
-
 
 @SpringJUnitConfig
 @ContextConfiguration(classes = {OptimizerTest.TestConfig.class})
@@ -49,8 +46,8 @@ public class OptimizerTest {
 
 //	private Optimizer optimizer = new TestConfig().optimizer();
 
-	@Test
-	public void testProcessCode() throws Exception {
-
-	}
+//	@Test
+//	public void testProcessCode() throws Exception {
+//
+//	}
 }
