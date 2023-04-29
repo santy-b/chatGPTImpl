@@ -25,7 +25,6 @@ public class ApiHttpsEmailClient {
     private String username;
     private String password;
     private Logger logger;
-//    APIServiceImpl apiService = new APIServiceImpl("https://api.openai.com/v1/completions", "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");
 
     public ApiHttpsEmailClient(String apiEndpoint, String apiKey, String username, String password) {
         this.apiEndpoint = apiEndpoint;
