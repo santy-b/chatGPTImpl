@@ -4,21 +4,35 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.w3c.dom.Document;
 import org.w3c.dom.Element;
 import org.w3c.dom.NodeList;
+import org.xml.sax.EntityResolver;
+import org.xml.sax.InputSource;
+import org.xml.sax.SAXException;
 import javax.tools.JavaCompiler;
 import javax.tools.JavaFileObject;
 import javax.tools.StandardJavaFileManager;
 import javax.tools.Diagnostic;
 import javax.tools.DiagnosticCollector;
 import javax.tools.ToolProvider;
+import javax.xml.XMLConstants;
 import javax.xml.parsers.DocumentBuilder;
 import javax.xml.parsers.DocumentBuilderFactory;
+import javax.xml.parsers.ParserConfigurationException;
 import java.io.*;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.List;
 import java.util.logging.Level;
 import java.util.logging.Logger;
+import java.util.stream.Collectors;
+import java.util.stream.IntStream;
 
 public class Optimizer {
+    private class NullResolver implements EntityResolver {
+        @Override
+        public InputSource resolveEntity(String publicId, String systemId) {
+            return new InputSource(new StringReader(""));
+        }
+    }
     private String model;
     private Logger logger = Logger.getLogger(Optimizer.class.getName());
     @Autowired
@@ -47,7 +61,7 @@ public class Optimizer {
             String prompt = (optimizePrompt()[0] + "\n" + fileToString(javaFile) + "\n" + optimizePrompt()[1] + "\n" + errors + "\n" + optimizePrompt()[2] + "\n" + getPomDependencies(pomFile)).replaceAll("\\s{2,}", " ");
             String solution = null;
             try {
-                solution = client.apiRequest(prompt, model);
+                solution = client.sendApiRequest(prompt, model);
             } catch (IOException e) {
                 throw new RuntimeException(e);
             }
@@ -96,30 +110,40 @@ public class Optimizer {
         List<String> dependencies = new ArrayList<>();
         try {
             DocumentBuilderFactory documentBuilderFactory = DocumentBuilderFactory.newInstance();
+            documentBuilderFactory.setFeature(XMLConstants.FEATURE_SECURE_PROCESSING, true);
             DocumentBuilder documentBuilder = documentBuilderFactory.newDocumentBuilder();
-            Document document = documentBuilder.parse(pomFile);
-            String javaVersion = document.getElementsByTagName("java.version").item(0).getTextContent();
-            NodeList dependencyList = document.getElementsByTagName("dependency");
-            for (int i = 0; i < dependencyList.getLength(); i++) {
-                Element dependency = (Element) dependencyList.item(i);
-                NodeList groupId = dependency.getElementsByTagName("groupId");
-                NodeList artifactId = dependency.getElementsByTagName("artifactId");
-                NodeList version = dependency.getElementsByTagName("version");
-                if (groupId.getLength() > 0 && artifactId.getLength() > 0 && version.getLength() > 0) {
-                    String groupIdStr = groupId.item(0) != null ? groupId.item(0).getTextContent() : "";
-                    String artifactIdStr = artifactId.item(0) != null ? artifactId.item(0).getTextContent() : "";
-                    String versionStr = version.item(0) != null ? version.item(0).getTextContent() : "";
-                    String dependencyString = groupIdStr + ":" + artifactIdStr + ":" + versionStr;
-                    dependencies.add(dependencyString);
+            documentBuilder.setEntityResolver(new NullResolver());
+            try (InputStream is = new FileInputStream(pomFile)) {
+                Document document = documentBuilder.parse(is);
+                dependencies.addAll(extractDependencies(document));
+                String javaVersion = document.getElementsByTagName("java.version").item(0).getTextContent();
+                if (javaVersion != null && !javaVersion.isEmpty()) {
+                    dependencies.add("java.version:" + javaVersion);
                 }
             }
-            if (javaVersion != null && !javaVersion.isEmpty()) {
-                dependencies.add("java.version:" + javaVersion);
-            }
-        } catch (Exception e) {
+        } catch (ParserConfigurationException | SAXException | IOException e) {
             throw new RuntimeException("Error parsing POM file: " + e.getMessage(), e);
         }
         return dependencies;
+    }
+
+    private List<String> extractDependencies(Document document) {
+        NodeList dependencyList = document.getElementsByTagName("dependency");
+        return IntStream.range(0, dependencyList.getLength())
+                .mapToObj(dependencyList::item)
+                .map(dependency -> {
+                    NodeList groupId = ((Element) dependency).getElementsByTagName("groupId");
+                    NodeList artifactId = ((Element) dependency).getElementsByTagName("artifactId");
+                    NodeList version = ((Element) dependency).getElementsByTagName("version");
+                    return new String[]{
+                            groupId.item(0) != null ? groupId.item(0).getTextContent() : "",
+                            artifactId.item(0) != null ? artifactId.item(0).getTextContent() : "",
+                            version.item(0) != null ? version.item(0).getTextContent() : ""
+                    };
+                })
+                .filter(parts -> !Arrays.stream(parts).anyMatch(String::isEmpty))
+                .map(parts -> String.join(":", parts))
+                .collect(Collectors.toList());
     }
 
     private JavaCompiler.CompilationTask compileJavaFile(File javaFile, DiagnosticCollector<JavaFileObject> diagnostics) {
@@ -137,15 +161,15 @@ public class Optimizer {
 
     private String[] optimizePrompt() {
         String[] prompt = {
-               "Review Java code for areas that can be improved in terms of best practices, " +
-               "correctness, and efficiency. Provide feedback in code format on how to make the code better. " +
-               "Structure the response explaining What needs to be fixed and below that the proposed solution " +
-               "in code format. If no adjustment's is necessary simply say this method is already optimized: ",
+                "Review Java code for areas that can be improved in terms of best practices, " +
+                        "correctness, and efficiency. Provide feedback in code format on how to make the code better. " +
+                        "Structure the response explaining What needs to be fixed and below that the proposed solution " +
+                        "in code format. If no adjustment's are necessary simply say \"This method is already optimized\": ",
 
-               "Errors found in the code by the java compiler: ",
+                "Errors found in the code by the java compiler: ",
 
-               "Check the code's provided dependencies list for any known vulnerabilities " +
-               "or compatibility issues, and provide recommendations for how to address them: "};
+                "Check the code's provided dependencies list for any known vulnerabilities " +
+                        "or compatibility issues, and provide recommendations for how to address them: "};
         return prompt;
     }
 

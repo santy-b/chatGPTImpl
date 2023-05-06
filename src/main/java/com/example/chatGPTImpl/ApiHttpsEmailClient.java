@@ -1,6 +1,5 @@
 package com.example.chatGPTImpl;
 
-
 import org.json.JSONException;
 import org.json.JSONObject;
 import org.springframework.mail.SimpleMailMessage;
@@ -82,8 +81,16 @@ public class ApiHttpsEmailClient {
         logger.log(Level.INFO, "Suggested output sent successfully to email address: " + recipientEmail);
     }
 
-    public String apiRequest(String prompts, String model) throws IOException {
-        JSONObject requestData = createRequestData(prompts, model);
+    public String sendApiRequest(String prompt, String model) throws IOException {
+        JSONObject requestData = new JSONObject();
+        requestData.put("model", model);
+        requestData.put("prompt", prompt);
+        requestData.put("max_tokens", MAX_TOKENS);
+        requestData.put("temperature", TEMPERATURE);
+        System.out.println("__________________________ START OF REQUEST DATA __________________________");
+        System.out.println("Prompt:\n" + requestData.getString("prompt").replaceAll(":", ":\n"));
+        System.out.println("___________________________ END OF REQUEST DATA ___________________________");
+
         String response = sendHttpsRequest(new URL(apiEndpoint), requestData.toString(), apiKey);
         JSONObject json = new JSONObject(response);
         return json.getJSONArray("choices").getJSONObject(0).getString("text");
@@ -123,18 +130,6 @@ public class ApiHttpsEmailClient {
                 connection.disconnect();
             }
         }
-    }
-
-    private JSONObject createRequestData(String prompt, String model) {
-        JSONObject data = new JSONObject();
-        data.put("model", model);
-        data.put("prompt", prompt);
-        data.put("max_tokens", MAX_TOKENS);
-        data.put("temperature", TEMPERATURE);
-        System.out.println("__________________________ START OF REQUEST DATA __________________________");
-        System.out.println("Prompt:\n" + data.getString("prompt").replaceAll(":", ":\n"));
-        System.out.println("___________________________ END OF REQUEST DATA ___________________________");
-        return data;
     }
 
     private File extractZipFile(File zipFile) throws Exception {
