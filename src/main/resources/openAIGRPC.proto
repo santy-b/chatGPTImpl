@@ -4,7 +4,7 @@ package com.grpc;
 
 option java_multiple_files = true;
 option java_package = "com.grpc";
-option java_outer_classname = "ApiServiceGRPC";
+option java_outer_classname = "ApiServiceGrpc";
 option java_generic_services = true;
 
 message ApiRequest {

@@ -35,13 +35,13 @@ private static final long serialVersionUID = 0L;
   }
   public static final com.google.protobuf.Descriptors.Descriptor
       getDescriptor() {
-    return com.grpc.ApiServiceGRPC.internal_static_com_grpc_ApiRequest_descriptor;
+    return com.grpc.ApiServiceGrpc.internal_static_com_grpc_ApiRequest_descriptor;
   }
 
   @java.lang.Override
   protected com.google.protobuf.GeneratedMessageV3.FieldAccessorTable
       internalGetFieldAccessorTable() {
-    return com.grpc.ApiServiceGRPC.internal_static_com_grpc_ApiRequest_fieldAccessorTable
+    return com.grpc.ApiServiceGrpc.internal_static_com_grpc_ApiRequest_fieldAccessorTable
         .ensureFieldAccessorsInitialized(
             com.grpc.ApiRequest.class, com.grpc.ApiRequest.Builder.class);
   }
@@ -346,13 +346,13 @@ private static final long serialVersionUID = 0L;
       com.grpc.ApiRequestOrBuilder {
     public static final com.google.protobuf.Descriptors.Descriptor
         getDescriptor() {
-      return com.grpc.ApiServiceGRPC.internal_static_com_grpc_ApiRequest_descriptor;
+      return com.grpc.ApiServiceGrpc.internal_static_com_grpc_ApiRequest_descriptor;
     }
 
     @java.lang.Override
     protected com.google.protobuf.GeneratedMessageV3.FieldAccessorTable
         internalGetFieldAccessorTable() {
-      return com.grpc.ApiServiceGRPC.internal_static_com_grpc_ApiRequest_fieldAccessorTable
+      return com.grpc.ApiServiceGrpc.internal_static_com_grpc_ApiRequest_fieldAccessorTable
           .ensureFieldAccessorsInitialized(
               com.grpc.ApiRequest.class, com.grpc.ApiRequest.Builder.class);
     }
@@ -380,7 +380,7 @@ private static final long serialVersionUID = 0L;
     @java.lang.Override
     public com.google.protobuf.Descriptors.Descriptor
         getDescriptorForType() {
-      return com.grpc.ApiServiceGRPC.internal_static_com_grpc_ApiRequest_descriptor;
+      return com.grpc.ApiServiceGrpc.internal_static_com_grpc_ApiRequest_descriptor;
     }
 
     @java.lang.Override

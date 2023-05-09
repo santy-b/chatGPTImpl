@@ -1,22 +1,23 @@
 package com.example.chatGPTImpl;
 
-import org.json.JSONException;
+import com.grpc.ApiRequest;
+import com.grpc.ApiServiceImpl;
 import org.json.JSONObject;
 import org.springframework.mail.SimpleMailMessage;
 import org.springframework.mail.javamail.JavaMailSenderImpl;
-import javax.net.ssl.HttpsURLConnection;
 import java.io.*;
 import java.net.HttpURLConnection;
 import java.net.URL;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.Properties;
+import java.util.concurrent.*;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 import java.util.zip.ZipEntry;
 import java.util.zip.ZipInputStream;
 
-public class ApiHttpsEmailClient {
+public class ApiClient {
     private final int MAX_TOKENS = 2048;
     private final double TEMPERATURE = 0.2;
     private String apiEndpoint;
@@ -25,7 +26,7 @@ public class ApiHttpsEmailClient {
     private String password;
     private Logger logger;
 
-    public ApiHttpsEmailClient(String apiEndpoint, String apiKey, String username, String password) {
+    public ApiClient(String apiEndpoint, String apiKey, String username, String password) {
         this.apiEndpoint = apiEndpoint;
         this.apiKey = apiKey;
         this.username = username;
@@ -81,7 +82,7 @@ public class ApiHttpsEmailClient {
         logger.log(Level.INFO, "Suggested output sent successfully to email address: " + recipientEmail);
     }
 
-    public String sendApiRequest(String prompt, String model) throws IOException {
+    public String sendApiRequest(String prompt, String model) throws IOException, InterruptedException, ExecutionException {
         JSONObject requestData = new JSONObject();
         requestData.put("model", model);
         requestData.put("prompt", prompt);
@@ -91,45 +92,45 @@ public class ApiHttpsEmailClient {
         System.out.println("Prompt:\n" + requestData.getString("prompt").replaceAll(":", ":\n"));
         System.out.println("___________________________ END OF REQUEST DATA ___________________________");
 
-        String response = sendHttpsRequest(new URL(apiEndpoint), requestData.toString(), apiKey);
-        JSONObject json = new JSONObject(response);
-        return json.getJSONArray("choices").getJSONObject(0).getString("text");
+        return grpcRequest(requestData);
     }
 
-    private String sendHttpsRequest(URL url, String requestBody, String apiKey) throws IOException {
-        HttpsURLConnection connection = null;
-        try {
-            connection = (HttpsURLConnection) url.openConnection();
-            connection.setRequestMethod("POST");
-            connection.setRequestProperty("Content-Type", "application/json");
-            connection.setRequestProperty("Authorization", "Bearer " + apiKey);
-            connection.setDoOutput(true);
+    private String grpcRequest(JSONObject requestData) throws InterruptedException, ExecutionException {
+        ApiRequest apiRequest = ApiRequest.newBuilder()
+                .setUrl(apiEndpoint)
+                .setApiKey(apiKey)
+                .setRequestBody(requestData.toString())
+                .build();
+        ApiServiceImpl apiService = new ApiServiceImpl();
 
-            try (OutputStream outputStream = connection.getOutputStream()) {
-                outputStream.write(requestBody.getBytes());
-            }
+        // Create an ExecutorService to execute the request
+        ExecutorService executorService = Executors.newSingleThreadExecutor();
+        final String[] responseDataString = new String[1];
 
-            int responseCode = connection.getResponseCode();
-            if (responseCode != HttpURLConnection.HTTP_OK) {
-                throw new IOException("HTTP error code: " + responseCode);
+        // Submit the request to the ExecutorService
+        Future<?> future = executorService.submit(() -> {
+            CountDownLatch latch = new CountDownLatch(1);
+            apiService.sendRequest(null, apiRequest, apiResponse -> {
+                byte[] responseData = apiResponse.getData().toByteArray();
+                JSONObject json = new JSONObject(new String(responseData));
+                String result = json.getJSONArray("choices").getJSONObject(0).getString("text");
+                responseDataString[0] = result;
+                latch.countDown();
+            });
+            try {
+                latch.await();
+            } catch (InterruptedException e) {
+                throw new RuntimeException(e);
             }
+        });
 
-            try (InputStream inputStream = connection.getInputStream()) {
-                BufferedReader reader = new BufferedReader(new InputStreamReader(inputStream));
-                StringBuilder responseBuilder = new StringBuilder();
-                String line;
-                while ((line = reader.readLine()) != null) {
-                    responseBuilder.append(line);
-                }
-                return responseBuilder.toString();
-            } catch (JSONException e) {
-                throw new IOException("Error parsing JSON response", e);
-            }
-        } finally {
-            if (connection != null) {
-                connection.disconnect();
-            }
-        }
+        // Wait for the request to complete
+        future.get();
+
+        // Shut down the ExecutorService
+        executorService.shutdown();
+
+        return responseDataString[0];
     }
 
     private File extractZipFile(File zipFile) throws Exception {

@@ -21,6 +21,7 @@ import java.io.*;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
+import java.util.concurrent.ExecutionException;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 import java.util.stream.Collectors;
@@ -41,7 +42,7 @@ public class Optimizer {
         this.model = model;
     }
 
-    public void optimizeCodeAndEmail(String repositoryUrl, String recipientEmail) throws IOException {
+    public void optimizeCodeAndEmail(String repositoryUrl, String recipientEmail) throws IOException, ExecutionException {
         client.getLogger(logger);
 
         File repositoryDirectory = null;
@@ -62,7 +63,7 @@ public class Optimizer {
             String solution = null;
             try {
                 solution = client.sendApiRequest(prompt, model);
-            } catch (IOException e) {
+            } catch (IOException | InterruptedException e) {
                 throw new RuntimeException(e);
             }
             client.sendEmail(recipientEmail, solution, javaFile.getName());

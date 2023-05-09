@@ -107,7 +107,7 @@ public  abstract class ApiService
   public static final
       com.google.protobuf.Descriptors.ServiceDescriptor
       getDescriptor() {
-    return com.grpc.ApiServiceGRPC.getDescriptor().getServices().get(0);
+    return com.grpc.ApiServiceGrpc.getDescriptor().getServices().get(0);
   }
   public final com.google.protobuf.Descriptors.ServiceDescriptor
       getDescriptorForType() {

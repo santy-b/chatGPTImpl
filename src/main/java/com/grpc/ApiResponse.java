@@ -33,7 +33,7 @@ private static final long serialVersionUID = 0L;
   }
   public static final com.google.protobuf.Descriptors.Descriptor
       getDescriptor() {
-    return com.grpc.ApiServiceGRPC.internal_static_com_grpc_ApiResponse_descriptor;
+    return com.grpc.ApiServiceGrpc.internal_static_com_grpc_ApiResponse_descriptor;
   }
 
   @SuppressWarnings({"rawtypes"})
@@ -51,7 +51,7 @@ private static final long serialVersionUID = 0L;
   @java.lang.Override
   protected com.google.protobuf.GeneratedMessageV3.FieldAccessorTable
       internalGetFieldAccessorTable() {
-    return com.grpc.ApiServiceGRPC.internal_static_com_grpc_ApiResponse_fieldAccessorTable
+    return com.grpc.ApiServiceGrpc.internal_static_com_grpc_ApiResponse_fieldAccessorTable
         .ensureFieldAccessorsInitialized(
             com.grpc.ApiResponse.class, com.grpc.ApiResponse.Builder.class);
   }
@@ -73,7 +73,7 @@ private static final long serialVersionUID = 0L;
         java.lang.String, java.lang.String> defaultEntry =
             com.google.protobuf.MapEntry
             .<java.lang.String, java.lang.String>newDefaultInstance(
-                com.grpc.ApiServiceGRPC.internal_static_com_grpc_ApiResponse_ResponseHeadersEntry_descriptor, 
+                com.grpc.ApiServiceGrpc.internal_static_com_grpc_ApiResponse_ResponseHeadersEntry_descriptor, 
                 com.google.protobuf.WireFormat.FieldType.STRING,
                 "",
                 com.google.protobuf.WireFormat.FieldType.STRING,
@@ -332,7 +332,7 @@ java.lang.String defaultValue) {
       com.grpc.ApiResponseOrBuilder {
     public static final com.google.protobuf.Descriptors.Descriptor
         getDescriptor() {
-      return com.grpc.ApiServiceGRPC.internal_static_com_grpc_ApiResponse_descriptor;
+      return com.grpc.ApiServiceGrpc.internal_static_com_grpc_ApiResponse_descriptor;
     }
 
     @SuppressWarnings({"rawtypes"})
@@ -360,7 +360,7 @@ java.lang.String defaultValue) {
     @java.lang.Override
     protected com.google.protobuf.GeneratedMessageV3.FieldAccessorTable
         internalGetFieldAccessorTable() {
-      return com.grpc.ApiServiceGRPC.internal_static_com_grpc_ApiResponse_fieldAccessorTable
+      return com.grpc.ApiServiceGrpc.internal_static_com_grpc_ApiResponse_fieldAccessorTable
           .ensureFieldAccessorsInitialized(
               com.grpc.ApiResponse.class, com.grpc.ApiResponse.Builder.class);
     }
@@ -387,7 +387,7 @@ java.lang.String defaultValue) {
     @java.lang.Override
     public com.google.protobuf.Descriptors.Descriptor
         getDescriptorForType() {
-      return com.grpc.ApiServiceGRPC.internal_static_com_grpc_ApiResponse_descriptor;
+      return com.grpc.ApiServiceGrpc.internal_static_com_grpc_ApiResponse_descriptor;
     }
 
     @java.lang.Override

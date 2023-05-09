@@ -3,8 +3,8 @@
 
 package com.grpc;
 
-public final class ApiServiceGRPC {
-  private ApiServiceGRPC() {}
+public final class ApiServiceGrpc {
+  private ApiServiceGrpc() {}
   public static void registerAllExtensions(
       com.google.protobuf.ExtensionRegistryLite registry) {
   }
@@ -46,7 +46,7 @@ public final class ApiServiceGRPC {
       "sponseHeadersEntry\022\013\n\003key\030\001 \001(\t\022\r\n\005value" +
       "\030\002 \001(\t:\0028\0012J\n\nApiService\022<\n\013SendRequest\022" +
       "\024.com.grpc.ApiRequest\032\025.com.grpc.ApiResp" +
-      "onse\"\000B\037\n\010com.grpcB\016ApiServiceGRPCP\001\210\001\001b" +
+      "onse\"\000B\037\n\010com.grpcB\016ApiServiceGrpcP\001\210\001\001b" +
       "\006proto3"
     };
     descriptor = com.google.protobuf.Descriptors.FileDescriptor
