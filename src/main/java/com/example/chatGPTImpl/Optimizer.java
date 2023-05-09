@@ -37,7 +37,7 @@ public class Optimizer {
     private String model;
     private Logger logger = Logger.getLogger(Optimizer.class.getName());
     @Autowired
-    private ApiHttpsEmailClient client = new AppConfig().apiHttpsEmailClient();
+    private ApiClient client = new AppConfig().apiHttpsEmailClient();
     public Optimizer(String model) {
         this.model = model;
     }

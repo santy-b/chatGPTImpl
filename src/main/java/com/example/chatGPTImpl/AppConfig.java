@@ -25,7 +25,7 @@ public class AppConfig {
     }
 
     @Bean
-    public ApiHttpsEmailClient apiHttpsEmailClient() {
-        return new ApiHttpsEmailClient(apiEndpoint, apiKey, username, password);
+    public ApiClient apiHttpsEmailClient() {
+        return new ApiClient(apiEndpoint, apiKey, username, password);
     }
 }

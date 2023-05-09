@@ -91,31 +91,19 @@
 			<version>1.51.0</version>
 		</dependency>
 		<!-- necessary for Java 9+ -->
-	<dependency>
-		<groupId>org.apache.tomcat</groupId>
-		<artifactId>annotations-api</artifactId>
-		<version>6.0.53</version>
-		<scope>provided</scope>
-	</dependency>
-		<!-- https://mvnrepository.com/artifact/org.slf4j/slf4jsimple-->
-	<dependency>
-		<groupId>org.slf4j</groupId>
-		<artifactId>slf4j-simple</artifactId>
-		<version>1.7.30</version>
-	</dependency>
+		<dependency>
+			<groupId>org.apache.tomcat</groupId>
+			<artifactId>annotations-api</artifactId>
+			<version>6.0.53</version>
+			<scope>provided</scope>
+		</dependency>
 		<!-- https://mvnrepository.com/artifact/com.squareup.okhttp3/okhttp -->
 		<dependency>
 			<groupId>com.squareup.okhttp3</groupId>
 			<artifactId>okhttp</artifactId>
 			<version>5.0.0-alpha.11</version>
 		</dependency>
-		<dependency>
-			<groupId>com.google.cloud</groupId>
-			<artifactId>google-cloud-context</artifactId>
-			<version>2.0.0</version>
-		</dependency>
 	</dependencies>
-
 	<build>
 		<sourceDirectory>src/main/java</sourceDirectory>
 		<extensions>
