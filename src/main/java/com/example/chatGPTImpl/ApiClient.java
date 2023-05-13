@@ -123,10 +123,8 @@ public class ApiClient {
                 throw new RuntimeException(e);
             }
         });
-
         // Wait for the request to complete
         future.get();
-
         // Shut down the ExecutorService
         executorService.shutdown();
 
