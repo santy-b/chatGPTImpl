@@ -3,7 +3,6 @@ package com.example.chatGPTImpl;
 import org.json.JSONArray;
 import org.json.JSONException;
 import org.json.JSONObject;
-import org.apache.commons.io.FileUtils;
 import org.springframework.mail.SimpleMailMessage;
 import org.springframework.mail.javamail.JavaMailSenderImpl;
 import javax.net.ssl.HttpsURLConnection;
@@ -39,7 +38,7 @@ public class ApiHttpsEmailClient {
         this.logger = logger;
     }
 
-    public List<File> getFilesFromGitHubAPI(String owner, String repo, String branch) throws Exception {
+    public List<String> getFilesFromGitHubAPI(String owner, String repo, String branch) throws Exception {
         String url = "https://api.github.com/repos/" + owner + "/" + repo + "/contents?ref=" + branch;
         URL obj = new URL(url);
         HttpURLConnection con = (HttpURLConnection) obj.openConnection();
@@ -59,7 +58,7 @@ public class ApiHttpsEmailClient {
             in.close();
 
             JSONArray jsonArray = new JSONArray(response.toString());
-            List<File> files = new ArrayList<>();
+            List<String> fileContents = new ArrayList<>();
 
             for (int i = 0; i < jsonArray.length(); i++) {
                 JSONObject json = jsonArray.getJSONObject(i);
@@ -67,16 +66,14 @@ public class ApiHttpsEmailClient {
 
                 if (json.has("path")) {
                     String fileContent = getFileContentFromGitHubAPI(owner, repo, branch, json.getString("path"));
-                    File file = new File(fileName);
-                    FileUtils.writeStringToFile(file, fileContent, StandardCharsets.UTF_8);
-                    files.add(file);
+                    fileContents.add(fileContent);
 
                     Thread.sleep(100);
                 } else {
                     System.out.println("Skipping file " + fileName + " due to missing 'path' field in the response.");
                 }
             }
-            return files;
+            return fileContents;
         } else {
             throw new Exception("Failed to get files from GitHub API. Response code: " + responseCode);
         }

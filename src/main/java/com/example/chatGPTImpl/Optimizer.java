@@ -1,5 +1,6 @@
 package com.example.chatGPTImpl;
 
+import org.apache.commons.io.FileUtils;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.w3c.dom.Document;
 import org.w3c.dom.Element;
@@ -18,6 +19,7 @@ import javax.xml.parsers.DocumentBuilder;
 import javax.xml.parsers.DocumentBuilderFactory;
 import javax.xml.parsers.ParserConfigurationException;
 import java.io.*;
+import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
@@ -43,25 +45,30 @@ public class Optimizer {
 
     public void optimizeCodeAndEmail(String owner, String repo, String branch, String recipientEmail) throws Exception {
         client.getLogger(logger);
+        List<String> fileContents = client.getFilesFromGitHubAPI(owner, repo, branch);
 
-        List<File> files = client.getFilesFromGitHubAPI(owner, repo, branch);
+        for (String fileContent : fileContents) {
+            File tempFile = File.createTempFile("temp", ".java");
+            FileUtils.writeStringToFile(tempFile, fileContent, StandardCharsets.UTF_8);
 
-        for (File file : files) {
-            if (file.getName().endsWith(".java")) {
+            if (tempFile.getName().endsWith(".java")) {
                 DiagnosticCollector<JavaFileObject> diagnostics = new DiagnosticCollector<>();
-                JavaCompiler.CompilationTask task = compileJavaFile(file, diagnostics);
+                JavaCompiler.CompilationTask task = compileJavaFile(tempFile, diagnostics);
                 boolean success = task.call();
                 String errors = getErrorMessages(success, diagnostics);
-
-                File pomFile = findPomFile(file.getName(), file.getParentFile());
-                String prompt = (optimizePrompt()[0] + "\n" + fileToString(file) + "\n" + optimizePrompt()[1] + "\n" + errors + "\n" + optimizePrompt()[2] + "\n" + getPomDependencies(pomFile)).replaceAll("\\s{2,}", " ");
+                File pomFile = findPomFile(tempFile.getName(), tempFile.getParentFile());
+                String prompt = (optimizePrompt()[0] + "\n" + fileToString(tempFile) + "\n" + optimizePrompt()[1] + "\n" + errors + "\n" + optimizePrompt()[2] + "\n" + getPomDependencies(pomFile)).replaceAll("\\s{2,}", " ");
                 String solution = null;
+                String className = extractClassName(fileContent);
+
                 try {
                     solution = client.sendApiRequest(prompt, model);
                 } catch (IOException e) {
                     throw new RuntimeException(e);
                 }
-                client.sendEmail(recipientEmail, solution, file.getName());
+                client.sendEmail(recipientEmail, solution, className);
+
+                tempFile.delete();
             }
         }
     }
@@ -129,6 +136,20 @@ public class Optimizer {
                "Errors found in the code by the java compiler: ",
                "Check the code's provided dependencies list for any known vulnerabilities or compatibility issues, and provide recommendations for how to address them: "};
         return prompt;
+    }
+
+    private String extractClassName(String fileContent) {
+        int classIndex = fileContent.indexOf("class");
+        if (classIndex != -1) {
+            int spaceIndex = fileContent.indexOf(" ", classIndex + 1);
+            if (spaceIndex != -1) {
+                int braceIndex = fileContent.indexOf("{", spaceIndex + 1);
+                if (braceIndex != -1) {
+                    return fileContent.substring(spaceIndex + 1, braceIndex).trim() + ".java";
+                }
+            }
+        }
+        return "UnknownClassName";
     }
 
     private List<String> extractDependencies(Document document) {
