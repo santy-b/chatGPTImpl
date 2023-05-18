@@ -1,20 +1,21 @@
 package com.example.chatGPTImpl;
 
+import org.json.JSONArray;
 import org.json.JSONException;
 import org.json.JSONObject;
+import org.apache.commons.io.FileUtils;
 import org.springframework.mail.SimpleMailMessage;
 import org.springframework.mail.javamail.JavaMailSenderImpl;
 import javax.net.ssl.HttpsURLConnection;
 import java.io.*;
 import java.net.HttpURLConnection;
 import java.net.URL;
-import java.nio.file.Files;
-import java.nio.file.Path;
+import java.nio.charset.StandardCharsets;
+import java.util.ArrayList;
+import java.util.List;
 import java.util.Properties;
 import java.util.logging.Level;
 import java.util.logging.Logger;
-import java.util.zip.ZipEntry;
-import java.util.zip.ZipInputStream;
 
 public class ApiHttpsEmailClient {
     private final int MAX_TOKENS = 2048;
@@ -23,42 +24,84 @@ public class ApiHttpsEmailClient {
     private String apiKey;
     private String username;
     private String password;
+    private String token;
     private Logger logger;
 
-    public ApiHttpsEmailClient(String apiEndpoint, String apiKey, String username, String password) {
+    public ApiHttpsEmailClient(String apiEndpoint, String apiKey, String username, String password, String token) {
         this.apiEndpoint = apiEndpoint;
         this.apiKey = apiKey;
         this.username = username;
         this.password = password;
+        this.token = token;
     }
 
     public void getLogger(Logger logger) {
         this.logger = logger;
     }
 
-    public File downloadRepository(String repositoryUrl) throws Exception {
-        String[] parts = repositoryUrl.split("/");
-        if (parts.length < 4 || !parts[0].equals("https:") || !parts[2].endsWith(".com")) {
-            throw new IllegalArgumentException("Invalid repository URL: " + repositoryUrl);
-        }
-        String service = parts[2].replaceAll("\\.com", "");
-        String owner = parts[3];
-        String repoName = parts[4].replaceAll("\\.git", "").replaceAll("#.*", "");
+    public List<File> getFilesFromGitHubAPI(String owner, String repo, String branch) throws Exception {
+        String url = "https://api.github.com/repos/" + owner + "/" + repo + "/contents?ref=" + branch;
+        URL obj = new URL(url);
+        HttpURLConnection con = (HttpURLConnection) obj.openConnection();
 
-        String downloadUrl = String.format("https://%s.com/%s/%s/archive/refs/heads/main.zip", service, owner, repoName);
-        URL url = new URL(downloadUrl);
-        HttpURLConnection connection = (HttpURLConnection) url.openConnection();
-        try (InputStream inputStream = connection.getInputStream()) {
-            File zipFile = File.createTempFile("repo", ".zip");
-            zipFile.deleteOnExit();
-            try (FileOutputStream outputStream = new FileOutputStream(zipFile)) {
-                byte[] buffer = new byte[4096];
-                int bytesRead;
-                while ((bytesRead = inputStream.read(buffer)) != -1) {
-                    outputStream.write(buffer, 0, bytesRead);
+        con.setRequestMethod("GET");
+        con.setRequestProperty("User-Agent", "Mozilla/5.0");
+        con.setRequestProperty("Authorization", "Bearer " + token);
+
+        int responseCode = con.getResponseCode();
+        if (responseCode == HttpURLConnection.HTTP_OK) {
+            BufferedReader in = new BufferedReader(new InputStreamReader(con.getInputStream(), StandardCharsets.UTF_8));
+            StringBuilder response = new StringBuilder();
+            String line;
+            while ((line = in.readLine()) != null) {
+                response.append(line);
+            }
+            in.close();
+
+            JSONArray jsonArray = new JSONArray(response.toString());
+            List<File> files = new ArrayList<>();
+
+            for (int i = 0; i < jsonArray.length(); i++) {
+                JSONObject json = jsonArray.getJSONObject(i);
+                String fileName = json.getString("name");
+
+                if (json.has("path")) {
+                    String fileContent = getFileContentFromGitHubAPI(owner, repo, branch, json.getString("path"));
+                    File file = new File(fileName);
+                    FileUtils.writeStringToFile(file, fileContent, StandardCharsets.UTF_8);
+                    files.add(file);
+
+                    Thread.sleep(100);
+                } else {
+                    System.out.println("Skipping file " + fileName + " due to missing 'path' field in the response.");
                 }
             }
-            return extractZipFile(zipFile);
+            return files;
+        } else {
+            throw new Exception("Failed to get files from GitHub API. Response code: " + responseCode);
+        }
+    }
+
+    private String getFileContentFromGitHubAPI(String owner, String repo, String branch, String filePath) throws Exception {
+        String rawFileUrl = "https://raw.githubusercontent.com/" + owner + "/" + repo + "/" + branch + "/" + filePath;
+        URL obj = new URL(rawFileUrl);
+        HttpURLConnection con = (HttpURLConnection) obj.openConnection();
+        con.setRequestMethod("GET");
+        con.setRequestProperty("User-Agent", "Mozilla/5.0");
+
+        int responseCode = con.getResponseCode();
+        if (responseCode == HttpURLConnection.HTTP_OK) {
+            BufferedReader in = new BufferedReader(new InputStreamReader(con.getInputStream(), StandardCharsets.UTF_8));
+            StringBuilder response = new StringBuilder();
+            String line;
+            while ((line = in.readLine()) != null) {
+                response.append(line);
+            }
+            in.close();
+
+            return response.toString();
+        } else {
+            throw new Exception("Failed to get file content from GitHub API. Response code: " + responseCode);
         }
     }
 
@@ -130,25 +173,5 @@ public class ApiHttpsEmailClient {
                 connection.disconnect();
             }
         }
-    }
-
-    private File extractZipFile(File zipFile) throws Exception {
-        String repoName = zipFile.getName().substring(0, zipFile.getName().indexOf(".zip"));
-        Path localDirectory = Files.createTempDirectory(repoName);
-        try (ZipInputStream zipInputStream = new ZipInputStream(Files.newInputStream(zipFile.toPath()))) {
-            ZipEntry zipEntry = zipInputStream.getNextEntry();
-            while (zipEntry != null) {
-                Path path = localDirectory.resolve(zipEntry.getName());
-                if (zipEntry.isDirectory()) {
-                    Files.createDirectories(path);
-                } else {
-                    Files.copy(zipInputStream, path);
-                }
-                zipEntry = zipInputStream.getNextEntry();
-            }
-        }
-        Files.delete(zipFile.toPath());
-
-        return localDirectory.toFile();
     }
 }

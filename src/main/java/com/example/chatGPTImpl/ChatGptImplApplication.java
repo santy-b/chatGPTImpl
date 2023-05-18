@@ -15,9 +15,13 @@ public class ChatGptImplApplication {
 	}
 
 
-	public static void main(String[] args) throws IOException {
+	public static void main(String[] args) {
 		SpringApplication.run(ChatGptImplApplication.class, args);
-		optimizer.optimizeCodeAndEmail("https://github.com/santy-b/Data-Structures/archive/refs/heads/main.zip" ,"sbrianfig@gmail.com");
+		try {
+			optimizer.optimizeCodeAndEmail("santy-b", "Data-Structures" , "main", "sbrianfig@gmail.com");
+		} catch (Exception e) {
+			throw new RuntimeException(e);
+		}
 	}
 
 }

@@ -14,6 +14,8 @@ public class AppConfig {
     private String username;
     @Value("${password}")
     private String password;
+    @Value("${token}")
+    private String token;
     @Value("${api.endpoint}")
     private String apiEndpoint;
     @Value("${api.key}")
@@ -26,6 +28,6 @@ public class AppConfig {
 
     @Bean
     public ApiHttpsEmailClient apiHttpsEmailClient() {
-        return new ApiHttpsEmailClient(apiEndpoint, apiKey, username, password);
+        return new ApiHttpsEmailClient(apiEndpoint, apiKey, username, password, token);
     }
 }

@@ -41,59 +41,29 @@ public class Optimizer {
         this.model = model;
     }
 
-    public void optimizeCodeAndEmail(String repositoryUrl, String recipientEmail) throws IOException {
+    public void optimizeCodeAndEmail(String owner, String repo, String branch, String recipientEmail) throws Exception {
         client.getLogger(logger);
 
-        File repositoryDirectory = null;
-        try {
-            repositoryDirectory = client.downloadRepository(repositoryUrl);
-        } catch (Exception e) {
-            throw new RuntimeException(e);
-        }
-        List<File> javaFiles = findJavaFiles(repositoryDirectory);
-        for (File javaFile : javaFiles) {
-            DiagnosticCollector<JavaFileObject> diagnostics = new DiagnosticCollector<>();
-            JavaCompiler.CompilationTask task = compileJavaFile(javaFile, diagnostics);
-            boolean success = task.call();
-            String errors = getErrorMessages(success, diagnostics);
+        List<File> files = client.getFilesFromGitHubAPI(owner, repo, branch);
 
-            File pomFile = findPomFile(javaFile.getName(), repositoryDirectory);
-            String prompt = (optimizePrompt()[0] + "\n" + fileToString(javaFile) + "\n" + optimizePrompt()[1] + "\n" + errors + "\n" + optimizePrompt()[2] + "\n" + getPomDependencies(pomFile)).replaceAll("\\s{2,}", " ");
-            String solution = null;
-            try {
-                solution = client.sendApiRequest(prompt, model);
-            } catch (IOException e) {
-                throw new RuntimeException(e);
-            }
-            client.sendEmail(recipientEmail, solution, javaFile.getName());
-        }
-    }
+        for (File file : files) {
+            if (file.getName().endsWith(".java")) {
+                DiagnosticCollector<JavaFileObject> diagnostics = new DiagnosticCollector<>();
+                JavaCompiler.CompilationTask task = compileJavaFile(file, diagnostics);
+                boolean success = task.call();
+                String errors = getErrorMessages(success, diagnostics);
 
-    private List<File> findJavaFiles(File repositoryDirectory) {
-        List<File> javaFiles = new ArrayList<>();
-        File[] files = repositoryDirectory.listFiles();
-        if (files != null) {
-            for (File file : files) {
-                if (file.isDirectory() && !file.getName().startsWith(".")) {
-                    javaFiles.addAll(findJavaFiles(file));
-                } else if (file.getName().endsWith(".java")) {
-                    javaFiles.add(file);
+                File pomFile = findPomFile(file.getName(), file.getParentFile());
+                String prompt = (optimizePrompt()[0] + "\n" + fileToString(file) + "\n" + optimizePrompt()[1] + "\n" + errors + "\n" + optimizePrompt()[2] + "\n" + getPomDependencies(pomFile)).replaceAll("\\s{2,}", " ");
+                String solution = null;
+                try {
+                    solution = client.sendApiRequest(prompt, model);
+                } catch (IOException e) {
+                    throw new RuntimeException(e);
                 }
+                client.sendEmail(recipientEmail, solution, file.getName());
             }
         }
-        return javaFiles;
-    }
-
-    private String fileToString(File file) throws IOException {
-        StringBuilder stringBuilder = new StringBuilder();
-        try (BufferedReader reader = new BufferedReader(new FileReader(file))) {
-            String line = reader.readLine();
-            while (line != null) {
-                stringBuilder.append(line).append("\n");
-                line = reader.readLine();
-            }
-        }
-        return stringBuilder.toString();
     }
 
     private File findPomFile(String javaFileName, File directory) {
@@ -127,6 +97,40 @@ public class Optimizer {
         return dependencies;
     }
 
+    private JavaCompiler.CompilationTask compileJavaFile(File javaFile, DiagnosticCollector<JavaFileObject> diagnostics) {
+        try {
+            JavaCompiler compiler = ToolProvider.getSystemJavaCompiler();
+            StandardJavaFileManager fileManager = compiler.getStandardFileManager(diagnostics, null, null);
+            Iterable<? extends JavaFileObject> fileObjects = fileManager.getJavaFileObjects(javaFile);
+            return compiler.getTask(null, fileManager, diagnostics, null, null, fileObjects);
+        } catch (Exception e) {
+            System.err.println("Error compiling Java file: " + e.getMessage());
+            e.printStackTrace();
+            return null;
+        }
+    }
+
+    private String fileToString(File file) throws IOException {
+        StringBuilder stringBuilder = new StringBuilder();
+        try (BufferedReader reader = new BufferedReader(new FileReader(file))) {
+            String line = reader.readLine();
+            while (line != null) {
+                stringBuilder.append(line).append("\n");
+                line = reader.readLine();
+            }
+        }
+        return stringBuilder.toString();
+    }
+
+    private String[] optimizePrompt() {
+        String[] prompt = {
+               "Review Java code for areas that can be improved in terms of best practices, correctness, and efficiency. Provide feedback in code format on how to make the code better.\n" +
+               "Structure the response explaining What needs to be fixed and below that the proposed solution in code format. If no adjustment's are necessary simply say \"This method is already optimized\": ",
+               "Errors found in the code by the java compiler: ",
+               "Check the code's provided dependencies list for any known vulnerabilities or compatibility issues, and provide recommendations for how to address them: "};
+        return prompt;
+    }
+
     private List<String> extractDependencies(Document document) {
         NodeList dependencyList = document.getElementsByTagName("dependency");
         return IntStream.range(0, dependencyList.getLength())
@@ -144,33 +148,6 @@ public class Optimizer {
                 .filter(parts -> !Arrays.stream(parts).anyMatch(String::isEmpty))
                 .map(parts -> String.join(":", parts))
                 .collect(Collectors.toList());
-    }
-
-    private JavaCompiler.CompilationTask compileJavaFile(File javaFile, DiagnosticCollector<JavaFileObject> diagnostics) {
-        try {
-            JavaCompiler compiler = ToolProvider.getSystemJavaCompiler();
-            StandardJavaFileManager fileManager = compiler.getStandardFileManager(diagnostics, null, null);
-            Iterable<? extends JavaFileObject> fileObjects = fileManager.getJavaFileObjects(javaFile);
-            return compiler.getTask(null, fileManager, diagnostics, null, null, fileObjects);
-        } catch (Exception e) {
-            System.err.println("Error compiling Java file: " + e.getMessage());
-            e.printStackTrace();
-            return null;
-        }
-    }
-
-    private String[] optimizePrompt() {
-        String[] prompt = {
-               "Review Java code for areas that can be improved in terms of best practices, " +
-               "correctness, and efficiency. Provide feedback in code format on how to make the code better. " +
-               "Structure the response explaining What needs to be fixed and below that the proposed solution " +
-               "in code format. If no adjustment's are necessary simply say \"This method is already optimized\": ",
-
-               "Errors found in the code by the java compiler: ",
-
-               "Check the code's provided dependencies list for any known vulnerabilities " +
-               "or compatibility issues, and provide recommendations for how to address them: "};
-        return prompt;
     }
 
     private String getErrorMessages(boolean success, DiagnosticCollector<JavaFileObject> diagnostics) {

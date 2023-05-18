@@ -1,3 +1,1 @@
-# chatGPTImpl
-This is an implementation that leverages the chatGPT API to do code reviews and optimization.
-The appConfig class handles configurations and populating fields with application.propertie values including a method that 
+# Data-StructuresBelow is a collection of Data Structure classes that I created.You can simply instantiate these different classes on your main method and call the different methods from these classes. 
