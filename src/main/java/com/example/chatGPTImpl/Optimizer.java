@@ -139,9 +139,19 @@ public class Optimizer {
     }
 
     private String extractClassName(String fileContent) {
-        int classIndex = fileContent.indexOf("class");
-        if (classIndex != -1) {
-            int spaceIndex = fileContent.indexOf(" ", classIndex + 1);
+        String[] keywords = {"class", "interface", "enum"};
+        int startIndex = -1;
+        String declaration = "";
+
+        for (String keyword : keywords) {
+            int index = fileContent.indexOf(keyword);
+            if (index != -1 && (startIndex == -1 || index < startIndex)) {
+                startIndex = index;
+                declaration = keyword;
+            }
+        }
+        if (startIndex != -1) {
+            int spaceIndex = fileContent.indexOf(" ", startIndex + declaration.length());
             if (spaceIndex != -1) {
                 int braceIndex = fileContent.indexOf("{", spaceIndex + 1);
                 if (braceIndex != -1) {
@@ -151,6 +161,7 @@ public class Optimizer {
         }
         return "UnknownClassName";
     }
+
 
     private List<String> extractDependencies(Document document) {
         NodeList dependencyList = document.getElementsByTagName("dependency");
