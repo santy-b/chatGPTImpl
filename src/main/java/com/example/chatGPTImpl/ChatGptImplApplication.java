@@ -15,7 +15,7 @@ public class ChatGptImplApplication {
 	public static void main(String[] args) {
 		SpringApplication.run(ChatGptImplApplication.class, args);
 		try {
-			optimizer.optimizeCodeAndEmail("santy-b", "Data-Structures" , "main", "sbrianfig@gmail.com");
+			optimizer.optimizeCodeAndEmail("santy-b", "democlasses" , "main", "sbrianfig@gmail.com");
 		} catch (Exception e) {
 			throw new RuntimeException(e);
 		}

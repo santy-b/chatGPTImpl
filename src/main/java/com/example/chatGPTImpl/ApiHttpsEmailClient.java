@@ -9,7 +9,6 @@ import javax.net.ssl.HttpsURLConnection;
 import java.io.*;
 import java.net.HttpURLConnection;
 import java.net.URL;
-import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Properties;
@@ -39,67 +38,32 @@ public class ApiHttpsEmailClient {
     }
 
     public List<String> getFilesFromGitHubAPI(String owner, String repo, String branch) throws Exception {
-        String url = "https://api.github.com/repos/" + owner + "/" + repo + "/contents?ref=" + branch;
-        URL obj = new URL(url);
-        HttpURLConnection con = (HttpURLConnection) obj.openConnection();
+        String url = "https://api.github.com/repos/" + owner + "/" + repo + "/contents/src/main/java?ref=" + branch;
+        String response = sendHttpsRequest(new URL(url), null, null, "GET");
 
-        con.setRequestMethod("GET");
-        con.setRequestProperty("User-Agent", "Mozilla/5.0");
-        con.setRequestProperty("Authorization", "Bearer " + token);
+        JSONArray jsonArray = new JSONArray(response);
+        List<String> fileContents = new ArrayList<>();
 
-        int responseCode = con.getResponseCode();
-        if (responseCode == HttpURLConnection.HTTP_OK) {
-            BufferedReader in = new BufferedReader(new InputStreamReader(con.getInputStream(), StandardCharsets.UTF_8));
-            StringBuilder response = new StringBuilder();
-            String line;
-            while ((line = in.readLine()) != null) {
-                response.append(line);
+        for (int i = 0; i < jsonArray.length(); i++) {
+            JSONObject json = jsonArray.getJSONObject(i);
+            String fileName = json.getString("name");
+
+            if (json.has("path")) {
+                String filePath = json.getString("path").replace("src/main/java/", "");
+                String fileContent = getFileContentFromGitHubAPI(owner, repo, branch, filePath);
+                fileContents.add(fileContent);
+
+                Thread.sleep(100);
+            } else {
+                System.out.println("Skipping file " + fileName + " due to missing 'path' field in the response.");
             }
-            in.close();
-
-            JSONArray jsonArray = new JSONArray(response.toString());
-            List<String> fileContents = new ArrayList<>();
-
-            for (int i = 0; i < jsonArray.length(); i++) {
-                JSONObject json = jsonArray.getJSONObject(i);
-                String fileName = json.getString("name");
-
-                if (json.has("path")) {
-                    String fileContent = getFileContentFromGitHubAPI(owner, repo, branch, json.getString("path"));
-                    fileContents.add(fileContent);
-
-                    Thread.sleep(100);
-                } else {
-                    System.out.println("Skipping file " + fileName + " due to missing 'path' field in the response.");
-                }
-            }
-            return fileContents;
-        } else {
-            throw new Exception("Failed to get files from GitHub API. Response code: " + responseCode);
         }
+        return fileContents;
     }
 
     private String getFileContentFromGitHubAPI(String owner, String repo, String branch, String filePath) throws Exception {
-        String rawFileUrl = "https://raw.githubusercontent.com/" + owner + "/" + repo + "/" + branch + "/" + filePath;
-        URL obj = new URL(rawFileUrl);
-        HttpURLConnection con = (HttpURLConnection) obj.openConnection();
-        con.setRequestMethod("GET");
-        con.setRequestProperty("User-Agent", "Mozilla/5.0");
-
-        int responseCode = con.getResponseCode();
-        if (responseCode == HttpURLConnection.HTTP_OK) {
-            BufferedReader in = new BufferedReader(new InputStreamReader(con.getInputStream(), StandardCharsets.UTF_8));
-            StringBuilder response = new StringBuilder();
-            String line;
-            while ((line = in.readLine()) != null) {
-                response.append(line);
-            }
-            in.close();
-
-            return response.toString();
-        } else {
-            throw new Exception("Failed to get file content from GitHub API. Response code: " + responseCode);
-        }
+        String rawFileUrl = "https://raw.githubusercontent.com/" + owner + "/" + repo + "/" + branch + "/src/main/java/" + filePath;
+        return sendHttpsRequest(new URL(rawFileUrl), null, null, "GET");
     }
 
     public void sendEmail(String recipientEmail, String solution, String fileName) {
@@ -131,22 +95,26 @@ public class ApiHttpsEmailClient {
         System.out.println("Prompt:\n" + requestData.getString("prompt").replaceAll(":", ":\n"));
         System.out.println("___________________________ END OF REQUEST DATA ___________________________");
 
-        String response = sendHttpsRequest(new URL(apiEndpoint), requestData.toString(), apiKey);
+        String response = sendHttpsRequest(new URL(apiEndpoint), requestData.toString(), apiKey, "POST");
         JSONObject json = new JSONObject(response);
         return json.getJSONArray("choices").getJSONObject(0).getString("text");
     }
 
-    private String sendHttpsRequest(URL url, String requestBody, String apiKey) throws IOException {
+    private String sendHttpsRequest(URL url, String requestBody, String apiKey, String requestMethod) throws IOException {
         HttpsURLConnection connection = null;
         try {
             connection = (HttpsURLConnection) url.openConnection();
-            connection.setRequestMethod("POST");
+            connection.setRequestMethod(requestMethod);
             connection.setRequestProperty("Content-Type", "application/json");
-            connection.setRequestProperty("Authorization", "Bearer " + apiKey);
+            if (apiKey != null) {
+                connection.setRequestProperty("Authorization", "Bearer " + apiKey);
+            }
             connection.setDoOutput(true);
 
-            try (OutputStream outputStream = connection.getOutputStream()) {
-                outputStream.write(requestBody.getBytes());
+            if (requestBody != null) {
+                try (OutputStream outputStream = connection.getOutputStream()) {
+                    outputStream.write(requestBody.getBytes());
+                }
             }
 
             int responseCode = connection.getResponseCode();
