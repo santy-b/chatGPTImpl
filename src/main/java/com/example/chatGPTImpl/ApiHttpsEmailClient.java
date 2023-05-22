@@ -66,6 +66,7 @@ public class ApiHttpsEmailClient {
         return sendHttpsRequest(new URL(rawFileUrl), null, null, "GET");
     }
 
+
     public void sendEmail(String recipientEmail, String solution, String fileName) {
         JavaMailSenderImpl mailSender = new JavaMailSenderImpl();
         mailSender.setHost("smtp.gmail.com");

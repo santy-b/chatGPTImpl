@@ -20,9 +20,7 @@ import javax.xml.parsers.DocumentBuilderFactory;
 import javax.xml.parsers.ParserConfigurationException;
 import java.io.*;
 import java.nio.charset.StandardCharsets;
-import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.List;
+import java.util.*;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 import java.util.stream.Collectors;
@@ -46,6 +44,7 @@ public class Optimizer {
     public void optimizeCodeAndEmail(String owner, String repo, String branch, String recipientEmail) throws Exception {
         client.getLogger(logger);
         List<String> fileContents = client.getFilesFromGitHubAPI(owner, repo, branch);
+        List<String> dependencyPromptList = new ArrayList<>();
 
         for (String fileContent : fileContents) {
             File tempFile = File.createTempFile("temp", ".java");
@@ -57,17 +56,18 @@ public class Optimizer {
                 boolean success = task.call();
                 String errors = getErrorMessages(success, diagnostics);
                 File pomFile = findPomFile(tempFile.getName(), tempFile.getParentFile());
-                String prompt = (optimizePrompt()[0] + "\n" + fileToString(tempFile) + "\n" + optimizePrompt()[1] + "\n" + errors + "\n" + optimizePrompt()[2] + "\n" + getPomDependencies(pomFile)).replaceAll("\\s{2,}", " ");
+                String prompt = (optimizePrompt()[0] + fileToString(tempFile) + optimizePrompt()[1] + errors).replaceAll("\\s+", " ");
                 String solution = null;
                 String className = extractClassName(fileContent);
 
-                try {
-                    solution = client.sendApiRequest(prompt, model);
-                } catch (IOException e) {
-                    throw new RuntimeException(e);
+                String dependencyPrompt = (optimizePrompt()[2] + getPomDependencies(pomFile)).replaceAll("\\s+", " ");
+                if (!dependencyPromptList.contains(dependencyPrompt)) {
+                    dependencyPromptList.add(dependencyPrompt);
+                    String dependencySolution = client.sendApiRequest(dependencyPrompt, model);
+                    client.sendEmail(recipientEmail, dependencySolution, repo + " dependencies");
                 }
+                solution = client.sendApiRequest(prompt, model);
                 client.sendEmail(recipientEmail, solution, className);
-
                 tempFile.delete();
             }
         }
@@ -83,7 +83,7 @@ public class Optimizer {
         return pomFile.exists() ? pomFile : null;
     }
 
-    private List<String> getPomDependencies(File pomFile) {
+    private String getPomDependencies(File pomFile) {
         List<String> dependencies = new ArrayList<>();
         try {
             DocumentBuilderFactory documentBuilderFactory = DocumentBuilderFactory.newInstance();
@@ -101,7 +101,7 @@ public class Optimizer {
         } catch (ParserConfigurationException | SAXException | IOException e) {
             throw new RuntimeException("Error parsing POM file: " + e.getMessage(), e);
         }
-        return dependencies;
+        return String.join(",", dependencies);
     }
 
     private JavaCompiler.CompilationTask compileJavaFile(File javaFile, DiagnosticCollector<JavaFileObject> diagnostics) {
@@ -131,10 +131,9 @@ public class Optimizer {
 
     private String[] optimizePrompt() {
         String[] prompt = {
-               "Review Java code for areas that can be improved in terms of best practices, correctness, and efficiency. Provide feedback in code format on how to make the code better.\n" +
-               "Structure the response explaining What needs to be fixed and below that the proposed solution in code format. If no adjustment's are necessary simply say \"This method is already optimized\": ",
-               "Errors found in the code by the java compiler: ",
-               "Check the code's provided dependencies list for any known vulnerabilities or compatibility issues, and provide recommendations for how to address them: "};
+               "Review Java code for improvements in best practices, correctness, and efficiency. Provide your feedback in code format. Code:",
+               "The following errors where identified by the Java compiler. Use these errors as a guide to identify and fix the corresponding issues in the code:",
+               "Analyze the provided dependencies list for any known vulnerabilities or compatibility issues. Based on the identified dependencies, provide recommendations on how to address any potential issues:"};
         return prompt;
     }
 
@@ -161,7 +160,6 @@ public class Optimizer {
         }
         return "UnknownClassName";
     }
-
 
     private List<String> extractDependencies(Document document) {
         NodeList dependencyList = document.getElementsByTagName("dependency");
